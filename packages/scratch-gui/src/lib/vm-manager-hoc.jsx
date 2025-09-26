@@ -38,6 +38,19 @@ const vmManagerHOC = function (WrappedComponent) {
             if (!this.props.isPlayerOnly && !this.props.isStarted) {
                 this.props.vm.start();
             }
+
+            // to load the project from parent app
+            window.addEventListener('message', event => {
+                if (!event.data) return;
+                if (event.data.type === 'LOAD_PROJECT') {
+                    const buffer = event.data.buffer;
+                    this.props.vm.loadProject(buffer)
+                        .then(() => {
+                            console.log('Project loaded from parent message');
+                        })
+                        .catch(e => console.error('Error loading project from buffer:', e));
+                }
+            });
         }
         componentDidUpdate (prevProps) {
             // if project is in loading state, AND fonts are loaded,
