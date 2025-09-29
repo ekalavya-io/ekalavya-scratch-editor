@@ -13,6 +13,7 @@ const initialState = {
 window.addEventListener('message', event => {
     if (!event.data) return;
     if (event.data.type === 'FULL_SCREEN') {
+        initialState.isFullScreen = true;
         initialState.isPlayerOnly = true;
     }
 });
