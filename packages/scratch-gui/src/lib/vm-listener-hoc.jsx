@@ -74,6 +74,9 @@ const vmListenerHOC = function (WrappedComponent) {
             }
         }
         handleProjectChanged () {
+            if (typeof window !== 'undefined' && window.parent) {
+                window.parent.postMessage({type: 'PROJECT_CHANGED'}, '*');
+            }
             if (this.props.shouldUpdateProjectChanged && !this.props.projectChanged) {
                 this.props.onProjectChanged();
             }
