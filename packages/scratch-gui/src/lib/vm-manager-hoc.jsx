@@ -45,9 +45,6 @@ const vmManagerHOC = function (WrappedComponent) {
                 if (event.data.type === 'LOAD_PROJECT') {
                     const buffer = event.data.buffer;
                     this.props.vm.loadProject(buffer)
-                        .then(() => {
-                            console.log('Project loaded from parent message');
-                        })
                         .catch(e => console.error('Error loading project from buffer:', e));
                 }
 
@@ -56,8 +53,7 @@ const vmManagerHOC = function (WrappedComponent) {
                     window.parent.postMessage(
                         {
                             type: 'PROJECT_SAVED',
-                            buffer: projectSb3,
-                            name: event.data.name || 'scratchProject.sb3'
+                            buffer: projectSb3
                         },
                         '*'
                     );

@@ -276,15 +276,9 @@ class MenuBar extends React.Component {
         }
     }
     getSaveToComputerHandler () {
-        return async () => {
+        return () => {
             this.props.onRequestCloseFile();
 
-            // to send file to parent app
-            const projectData = await this.props.vm.saveProjectSb3();
-            window.parent.postMessage({type: 'PROJECT_SAVED', buffer: projectData}, '*');
-
-            // to stop file download
-            // downloadProjectCallback();
             if (this.props.onProjectTelemetryEvent) {
                 const metadata = collectMetadata(this.props.vm, this.props.projectTitle, this.props.locale);
                 this.props.onProjectTelemetryEvent('projectDidSave', metadata);
