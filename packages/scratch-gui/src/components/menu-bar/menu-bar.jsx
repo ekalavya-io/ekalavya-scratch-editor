@@ -275,9 +275,10 @@ class MenuBar extends React.Component {
             event.preventDefault();
         }
     }
-    getSaveToComputerHandler () {
+    getSaveToComputerHandler (downloadProjectCallback) {
         return () => {
             this.props.onRequestCloseFile();
+            downloadProjectCallback();
 
             if (this.props.onProjectTelemetryEvent) {
                 const metadata = collectMetadata(this.props.vm, this.props.projectTitle, this.props.locale);
