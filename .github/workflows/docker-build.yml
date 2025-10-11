@@ -1,6 +1,6 @@
 name: Build_Docker_Image
 
-# Only triggered manually, and works only for develop branch
+# Only triggered manually, and works only for feature/no-ref/ekalavya branch
 on:
   workflow_dispatch:
 
@@ -9,7 +9,7 @@ env:
 
 jobs:
   build-and-push:
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/feature/no-ref/ekalavya'
     runs-on: ubuntu-latest
 
     steps:
@@ -36,8 +36,5 @@ jobs:
           tags: |
             ghcr.io/${{ env.IMAGE_NAME }}:dev
             ghcr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Verify image pushed
-        run: echo "✅ Image pushed to $REGISTRY/$IMAGE_NAME"
+          cache-from: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:dev
+          cache-to: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:dev,mode=max
