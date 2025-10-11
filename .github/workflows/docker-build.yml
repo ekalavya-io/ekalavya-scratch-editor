@@ -1,0 +1,40 @@
+name: Build_Docker_Image
+
+# Only triggered manually, and works only for feature/no-ref/ekalavya branch
+on:
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ekalavya-io/ekalavya-scratch-editor
+
+jobs:
+  build-and-push:
+    if: github.ref == 'refs/heads/feature/no-ref/ekalavya'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GIGET_AUTH }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_NAME }}:dev
+            ghcr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:dev
+          cache-to: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:dev,mode=max
