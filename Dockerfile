@@ -1,7 +1,7 @@
 # Stage 1: Build all workspaces
 FROM --platform=$BUILDPLATFORM node:20-alpine AS build
 
-RUN apk add --no-cache python3 g++ make cairo-dev pango-dev jpeg-dev giflib-dev
+RUN apk add --no-cache python3 g++ make cairo-dev pango-dev jpeg-dev giflib-dev bash
 
 WORKDIR /app
 
