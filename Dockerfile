@@ -1,15 +1,13 @@
 # Stage 1: Build all workspaces
 FROM --platform=$BUILDPLATFORM node:20-alpine AS build
 
-RUN apk add --no-cache python3 g++ make cairo-dev pango-dev jpeg-dev giflib-dev bash
+RUN apk add --no-cache bash python3 g++ make cairo-dev pango-dev jpeg-dev giflib-dev
 
 WORKDIR /app
 
 COPY package*.json ./
 
 RUN npm ci
-
-COPY . .
 
 # Build everything (this builds GUI, VM, renderers, etc.)
 RUN npm run build
