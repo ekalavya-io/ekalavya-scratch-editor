@@ -5,9 +5,9 @@ RUN apk add --no-cache bash python3 g++ make cairo-dev pango-dev jpeg-dev giflib
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY . .
 
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Build everything (this builds GUI, VM, renderers, etc.)
 RUN npm run build
