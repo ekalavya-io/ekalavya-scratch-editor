@@ -2,7 +2,7 @@ import classNames from 'classnames';
 import omit from 'lodash.omit';
 import PropTypes from 'prop-types';
 import React, {useEffect, useCallback} from 'react';
-import {FormattedMessage, useIntl} from 'react-intl';
+import {defineMessages, FormattedMessage, useIntl} from 'react-intl';
 import {connect} from 'react-redux';
 import MediaQuery from 'react-responsive';
 import {Tab, Tabs, TabList, TabPanel} from 'react-tabs';
@@ -34,7 +34,8 @@ import TelemetryModal from '../telemetry-modal/telemetry-modal.jsx';
 
 import layout, {STAGE_SIZE_MODES} from '../../lib/layout-constants';
 import {resolveStageSize} from '../../lib/screen-utils';
-import {themeMap} from '../../lib/themes';
+import {colorModeMap} from '../../lib/settings/color-mode/index.js';
+import {DEFAULT_THEME, themeMap} from '../../lib/settings/theme/index.js';
 import {AccountMenuOptionsPropTypes} from '../../lib/account-menu-options';
 
 import styles from './gui.css';
@@ -43,7 +44,66 @@ import costumesIcon from './icon--costumes.svg';
 import soundsIcon from './icon--sounds.svg';
 import DebugModal from '../debug-modal/debug-modal.jsx';
 import {setPlatform} from '../../reducers/platform.js';
+import {setTheme} from '../../reducers/settings.js';
 import {PLATFORM} from '../../lib/platform.js';
+
+const ariaMessages = defineMessages({
+    menuBar: {
+        id: 'gui.aria.menuBar',
+        defaultMessage: 'Menu topbar',
+        description: 'ARIA label for the top menu bar'
+    },
+    editor: {
+        id: 'gui.aria.editor',
+        defaultMessage: 'Editor',
+        description: 'ARIA label for the main editor area'
+    },
+    tabList: {
+        id: 'gui.aria.tabList',
+        defaultMessage: 'Tab list',
+        description: 'ARIA label for the editor tab list'
+    },
+    codePanel: {
+        id: 'gui.aria.codePanel',
+        defaultMessage: 'Code editor panel',
+        description: 'ARIA label for the code editor panel'
+    },
+    costumesPanel: {
+        id: 'gui.aria.costumesPanel',
+        defaultMessage: 'Costumes editor panel',
+        description: 'ARIA label for the costumes editor panel'
+    },
+    backdropsPanel: {
+        id: 'gui.aria.backdropsPanel',
+        defaultMessage: 'Backdrops editor panel',
+        description: 'ARIA label for the backdrops editor panel'
+    },
+    soundsPanel: {
+        id: 'gui.aria.soundsPanel',
+        defaultMessage: 'Sounds editor panel',
+        description: 'ARIA label for the sounds editor panel'
+    },
+    backpack: {
+        id: 'gui.aria.backpack',
+        defaultMessage: 'Backpack',
+        description: 'ARIA label for the backpack'
+    },
+    stageAndTarget: {
+        id: 'gui.aria.stageAndTarget',
+        defaultMessage: 'Stage and target',
+        description: 'ARIA label for stage and target area'
+    },
+    stage: {
+        id: 'gui.aria.stage',
+        defaultMessage: 'Stage',
+        description: 'ARIA label for the stage'
+    },
+    targetPane: {
+        id: 'gui.aria.targetPane',
+        defaultMessage: 'Target pane',
+        description: 'ARIA label for the target pane'
+    }
+});
 
 // Cache this value to only retrieve it once the first time.
 // Assume that it doesn't change for a session.
@@ -59,6 +119,7 @@ const GUIComponent = props => {
         authorId,
         authorThumbnailUrl,
         authorUsername,
+        authorAvatarBadge,
         basePath,
         backdropLibraryVisible,
         backpackHost,
@@ -67,6 +128,7 @@ const GUIComponent = props => {
         blocksTabVisible,
         cardsVisible,
         canChangeLanguage,
+        canChangeColorMode,
         canChangeTheme,
         canCreateNew,
         canEditTitle,
@@ -84,7 +146,9 @@ const GUIComponent = props => {
         onDebugModalClose,
         onTutorialSelect,
         enableCommunity,
+        hasActiveMembership,
         isCreating,
+        isFetchingUserData,
         isFullScreen,
         isPlayerOnly,
         isRtl,
@@ -94,6 +158,7 @@ const GUIComponent = props => {
         loading,
         logo,
         manuallySaveThumbnails,
+        menuBarHidden,
         renderLogin,
         onClickAbout,
         onClickAccountNav,
@@ -128,6 +193,7 @@ const GUIComponent = props => {
         stageSizeMode,
         targetIsStage,
         telemetryModalVisible,
+        colorMode,
         theme,
         tipsLibraryVisible,
         useExternalPeripheralList,
@@ -143,9 +209,22 @@ const GUIComponent = props => {
 
     useEffect(() => {
         if (props.platform) {
+            // TODO: This uses the imported `setPlatform` directly,
+            // but it should probably use the dispatched version from props.
             setPlatform(props.platform);
         }
     }, [props.platform]);
+
+    useEffect(() => {
+        if (
+            !isFetchingUserData &&
+            !themeMap[theme]?.isAvailable?.({hasActiveMembership})
+        ) {
+            // If the preferred theme is not available, fall back to default.
+            // TODO: It would be cleaner to do this on redux init.
+            props.setTheme(DEFAULT_THEME);
+        }
+    }, [theme, hasActiveMembership, props.setTheme]);
 
     const tabClassNames = {
         tabs: styles.tabs,
@@ -169,6 +248,9 @@ const GUIComponent = props => {
 
     return (<MediaQuery minWidth={layout.fullSizeMinWidth}>{isFullSize => {
         const stageSize = resolveStageSize(stageSizeMode, isFullSize);
+        const boxStyles = classNames(styles.bodyWrapper, {
+            [styles.bodyWrapperWithoutMenuBar]: menuBarHidden
+        });
 
         return isPlayerOnly ? (
             <StageWrapper
@@ -248,12 +330,16 @@ const GUIComponent = props => {
                         onRequestClose={onRequestCloseBackdropLibrary}
                     />
                 ) : null}
-                <MenuBar
+                {!menuBarHidden && <MenuBar
+                    ariaRole="banner"
+                    ariaLabel={intl.formatMessage(ariaMessages.menuBar)}
                     accountNavOpen={accountNavOpen}
                     authorId={authorId}
                     authorThumbnailUrl={authorThumbnailUrl}
                     authorUsername={authorUsername}
+                    authorAvatarBadge={authorAvatarBadge}
                     canChangeLanguage={canChangeLanguage}
+                    canChangeColorMode={canChangeColorMode}
                     canChangeTheme={canChangeTheme}
                     canCreateCopy={canCreateCopy}
                     canCreateNew={canCreateNew}
@@ -264,6 +350,7 @@ const GUIComponent = props => {
                     canShare={canShare}
                     className={styles.menuBarPosition}
                     enableCommunity={enableCommunity}
+                    hasActiveMembership={hasActiveMembership}
                     isShared={isShared}
                     isTotallyNormal={isTotallyNormal}
                     logo={logo}
@@ -283,20 +370,46 @@ const GUIComponent = props => {
                     userOwnsProject={userOwnsProject}
                     username={username}
                     accountMenuOptions={accountMenuOptions}
-                />
-                <Box className={styles.bodyWrapper}>
-                    <Box className={styles.flexWrapper}>
-                        <Box className={styles.editorWrapper}>
-                            <Tabs
-                                forceRenderTabPanel
-                                className={tabClassNames.tabs}
-                                selectedIndex={activeTabIndex}
-                                selectedTabClassName={tabClassNames.tabSelected}
-                                selectedTabPanelClassName={tabClassNames.tabPanelSelected}
-                                onSelect={onActivateTab}
+                />}
+                <Box className={classNames(boxStyles, styles.flexWrapper)}>
+                    <Box
+                        role="main"
+                        aria-label={intl.formatMessage(ariaMessages.editor)}
+                        className={styles.editorWrapper}
+                        element="main"
+                    >
+                        <Tabs
+                            forceRenderTabPanel
+                            className={tabClassNames.tabs}
+                            selectedIndex={activeTabIndex}
+                            selectedTabClassName={tabClassNames.tabSelected}
+                            selectedTabPanelClassName={tabClassNames.tabPanelSelected}
+                            onSelect={onActivateTab}
+
+                            // TODO: focusTabOnClick should be true for accessibility, but currently conflicts
+                            // with nudge operations in the paint editor. We'll likely need to manage focus
+                            // differently within the paint editor before we can turn this back on.
+                            // Repro steps:
+                            // 1. Click the Costumes tab
+                            // 2. Select something in the paint editor (say, the cat's face)
+                            // 3. Press the left or right arrow key
+                            // Desired behavior: the face should nudge left or right
+                            // Actual behavior: the Code or Sounds tab is now focused
+                            focusTabOnClick={false}
+                        >
+                            <Box
+                                role="region"
+                                aria-label={intl.formatMessage(ariaMessages.tabList)}
                             >
-                                <TabList className={tabClassNames.tabList}>
-                                    <Tab className={tabClassNames.tab}>
+                                <TabList
+                                    className={tabClassNames.tabList}
+                                    role="tablist"
+                                >
+                                    <Tab
+                                        className={tabClassNames.tab}
+                                        tabIndex="0"
+                                        role="tab"
+                                    >
                                         <img
                                             draggable={false}
                                             src={codeIcon}
@@ -310,6 +423,8 @@ const GUIComponent = props => {
                                     <Tab
                                         className={tabClassNames.tab}
                                         onClick={onActivateCostumesTab}
+                                        role="tab"
+                                        tabIndex="0"
                                     >
                                         <img
                                             draggable={false}
@@ -332,6 +447,8 @@ const GUIComponent = props => {
                                     <Tab
                                         className={tabClassNames.tab}
                                         onClick={onActivateSoundsTab}
+                                        role="tab"
+                                        tabIndex="0"
                                     >
                                         <img
                                             draggable={false}
@@ -344,66 +461,105 @@ const GUIComponent = props => {
                                         />
                                     </Tab>
                                 </TabList>
-                                <TabPanel className={tabClassNames.tabPanel}>
-                                    <Box className={styles.blocksWrapper}>
-                                        <Blocks
-                                            key={`${blocksId}/${theme}`}
-                                            canUseCloud={canUseCloud}
-                                            grow={1}
-                                            isVisible={blocksTabVisible}
-                                            options={{
-                                                media: `${basePath}static/${themeMap[theme].blocksMediaFolder}/`
-                                            }}
-                                            stageSize={stageSize}
-                                            theme={theme}
-                                            vm={vm}
-                                            showNewFeatureCallouts={showNewFeatureCallouts}
-                                            username={username}
-                                        />
-                                    </Box>
-                                    <ExtensionsButton
-                                        activeTabIndex={activeTabIndex}
-                                        intl={intl}
+                            </Box>
+                            <TabPanel
+                                className={tabClassNames.tabPanel}
+                                role="tabpanel"
+                            >
+                                <Box
+                                    className={styles.blocksWrapper}
+                                    role="region"
+                                    aria-label={intl.formatMessage(ariaMessages.codePanel)}
+                                    element="section"
+                                >
+                                    <Blocks
+                                        key={`${blocksId}/${colorMode}/${theme}`}
+                                        canUseCloud={canUseCloud}
+                                        grow={1}
+                                        isVisible={blocksTabVisible}
+                                        options={{
+                                            media: `${basePath}static/${colorModeMap[colorMode].blocksMediaFolder}/`
+                                        }}
+                                        stageSize={stageSize}
+                                        theme={theme}
+                                        vm={vm}
+                                        colorMode={colorMode}
                                         showNewFeatureCallouts={showNewFeatureCallouts}
-                                        onExtensionButtonClick={onExtensionButtonClick}
                                         username={username}
                                     />
-                                    <Box className={styles.watermark}>
-                                        <Watermark />
-                                    </Box>
-                                </TabPanel>
-                                <TabPanel className={tabClassNames.tabPanel}>
-                                    {costumesTabVisible ? <CostumeTab
+                                </Box>
+                                <ExtensionsButton
+                                    activeTabIndex={activeTabIndex}
+                                    intl={intl}
+                                    showNewFeatureCallouts={showNewFeatureCallouts}
+                                    onExtensionButtonClick={onExtensionButtonClick}
+                                    username={username}
+                                />
+                                <Box className={styles.watermark}>
+                                    <Watermark />
+                                </Box>
+                            </TabPanel>
+                            <TabPanel
+                                className={tabClassNames.tabPanel}
+                                role="tabpanel"
+                            >
+                                {costumesTabVisible ? <CostumeTab
+                                    ariaLabel={targetIsStage ? intl.formatMessage(ariaMessages.backdropsPanel) :
+                                        intl.formatMessage(ariaMessages.costumesPanel)}
+                                    ariaRole="region"
+                                    vm={vm}
+                                    onNewLibraryBackdropClick={onNewLibraryBackdropClick}
+                                    onNewLibraryCostumeClick={onNewLibraryCostumeClick}
+                                /> : null}
+                            </TabPanel>
+                            <TabPanel
+                                className={tabClassNames.tabPanel}
+                                role="tabpanel"
+                            >
+                                {soundsTabVisible ?
+                                    <SoundTab
+                                        ariaLabel={intl.formatMessage(ariaMessages.soundsPanel)}
+                                        ariaRole="region"
                                         vm={vm}
-                                        onNewLibraryBackdropClick={onNewLibraryBackdropClick}
-                                        onNewLibraryCostumeClick={onNewLibraryCostumeClick}
                                     /> : null}
-                                </TabPanel>
-                                <TabPanel className={tabClassNames.tabPanel}>
-                                    {soundsTabVisible ? <SoundTab vm={vm} /> : null}
-                                </TabPanel>
-                            </Tabs>
-                            {backpackVisible ? (
-                                <Backpack host={backpackHost} />
-                            ) : null}
-                        </Box>
+                            </TabPanel>
+                        </Tabs>
+                        {backpackVisible ? (
+                            <Backpack
+                                host={backpackHost}
+                                ariaRole="region"
+                                ariaLabel={intl.formatMessage(ariaMessages.backpack)}
+                            />
+                        ) : null}
+                    </Box>
 
-                        <Box className={classNames(styles.stageAndTargetWrapper, styles[stageSize])}>
-                            <StageWrapper
-                                isFullScreen={isFullScreen}
-                                isRendererSupported={isRendererSupported}
-                                isRtl={isRtl}
+                    <Box
+                        role="complementary"
+                        aria-label={intl.formatMessage(ariaMessages.stageAndTarget)}
+                        className={classNames(styles.stageAndTargetWrapper, styles[stageSize])}
+                        element="aside"
+                    >
+                        <StageWrapper
+                            isFullScreen={isFullScreen}
+                            isRendererSupported={isRendererSupported}
+                            isRtl={isRtl}
+                            stageSize={stageSize}
+                            vm={vm}
+                            ariaRole="region"
+                            ariaLabel={intl.formatMessage(ariaMessages.stage)}
+                        />
+                        <Box
+                            className={styles.targetWrapper}
+                            role="region"
+                            aria-label={intl.formatMessage(ariaMessages.targetPane)}
+                            element="section"
+                        >
+                            <TargetPane
                                 stageSize={stageSize}
                                 vm={vm}
+                                onNewSpriteClick={onNewSpriteClick}
+                                onNewBackdropClick={onNewLibraryBackdropClick}
                             />
-                            <Box className={styles.targetWrapper}>
-                                <TargetPane
-                                    stageSize={stageSize}
-                                    vm={vm}
-                                    onNewSpriteClick={onNewSpriteClick}
-                                    onNewBackdropClick={onNewLibraryBackdropClick}
-                                />
-                            </Box>
                         </Box>
                     </Box>
                 </Box>
@@ -420,6 +576,7 @@ GUIComponent.propTypes = {
     authorId: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]), // can be false
     authorThumbnailUrl: PropTypes.string,
     authorUsername: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]), // can be false
+    authorAvatarBadge: PropTypes.number,
     backdropLibraryVisible: PropTypes.bool,
     backpackHost: PropTypes.string,
     backpackVisible: PropTypes.bool,
@@ -427,6 +584,7 @@ GUIComponent.propTypes = {
     blocksTabVisible: PropTypes.bool,
     blocksId: PropTypes.string,
     canChangeLanguage: PropTypes.bool,
+    canChangeColorMode: PropTypes.bool,
     canChangeTheme: PropTypes.bool,
     canCreateCopy: PropTypes.bool,
     canCreateNew: PropTypes.bool,
@@ -441,10 +599,12 @@ GUIComponent.propTypes = {
     costumeLibraryVisible: PropTypes.bool,
     costumesTabVisible: PropTypes.bool,
     debugModalVisible: PropTypes.bool,
+    hasActiveMembership: PropTypes.bool,
     onDebugModalClose: PropTypes.func,
     onTutorialSelect: PropTypes.func,
     enableCommunity: PropTypes.bool,
     isCreating: PropTypes.bool,
+    isFetchingUserData: PropTypes.bool,
     isFullScreen: PropTypes.bool,
     isPlayerOnly: PropTypes.bool,
     isRtl: PropTypes.bool,
@@ -453,6 +613,7 @@ GUIComponent.propTypes = {
     loading: PropTypes.bool,
     logo: PropTypes.string,
     manuallySaveThumbnails: PropTypes.bool,
+    menuBarHidden: PropTypes.bool,
     onActivateCostumesTab: PropTypes.func,
     onActivateSoundsTab: PropTypes.func,
     onActivateTab: PropTypes.func,
@@ -480,6 +641,7 @@ GUIComponent.propTypes = {
     onUpdateProjectThumbnail: PropTypes.func,
     platform: PropTypes.oneOf(Object.keys(PLATFORM)),
     renderLogin: PropTypes.func,
+    setTheme: PropTypes.func.isRequired,
     showComingSoon: PropTypes.bool,
     showNewFeatureCallouts: PropTypes.bool,
     soundsTabVisible: PropTypes.bool,
@@ -487,6 +649,7 @@ GUIComponent.propTypes = {
     setPlatform: PropTypes.func,
     targetIsStage: PropTypes.bool,
     telemetryModalVisible: PropTypes.bool,
+    colorMode: PropTypes.string,
     theme: PropTypes.string,
     tipsLibraryVisible: PropTypes.bool,
     useExternalPeripheralList: PropTypes.bool, // true for CDM, false for normal Scratch Link
@@ -501,7 +664,9 @@ GUIComponent.defaultProps = {
     backpackVisible: false,
     basePath: './',
     blocksId: 'original',
+    // TODO: Currently all of those are always true. Do we actually need them?
     canChangeLanguage: true,
+    canChangeColorMode: true,
     canChangeTheme: true,
     canCreateNew: false,
     canEditTitle: false,
@@ -516,6 +681,7 @@ GUIComponent.defaultProps = {
     isShared: false,
     isTotallyNormal: false,
     loading: false,
+    menuBarHidden: false,
     showComingSoon: false,
     showNewFeatureCallouts: false,
     stageSizeMode: STAGE_SIZE_MODES.large,
@@ -526,11 +692,13 @@ const mapStateToProps = state => ({
     // This is the button's mode, as opposed to the actual current state
     blocksId: state.scratchGui.timeTravel.year.toString(),
     stageSizeMode: state.scratchGui.stageSize.stageSize,
-    theme: state.scratchGui.theme.theme
+    colorMode: state.scratchGui.settings.colorMode,
+    theme: state.scratchGui.settings.theme
 });
 
 const mapDispatchToProps = dispatch => ({
-    setPlatform: platform => dispatch(setPlatform(platform))
+    setPlatform: platform => dispatch(setPlatform(platform)),
+    setTheme: theme => dispatch(setTheme(theme))
 });
 
 export default connect(mapStateToProps,

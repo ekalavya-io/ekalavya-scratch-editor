@@ -376,6 +376,9 @@ class MenuBar extends React.Component {
                     this.props.className,
                     styles.menuBar
                 )}
+                aria-label={this.props.ariaLabel}
+                role={this.props.ariaRole}
+                element="header"
             >
                 <div className={styles.mainMenu}>
                     <div className={styles.fileGroup}>
@@ -422,11 +425,15 @@ class MenuBar extends React.Component {
 MenuBar.propTypes = {
     aboutMenuOpen: PropTypes.bool,
     accountMenuOpen: PropTypes.bool,
+    ariaLabel: PropTypes.string,
+    ariaRole: PropTypes.string,
     authorId: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
     authorThumbnailUrl: PropTypes.string,
     authorUsername: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
+    authorAvatarBadge: PropTypes.number,
     autoUpdateProject: PropTypes.func,
     canChangeLanguage: PropTypes.bool,
+    canChangeColorMode: PropTypes.bool,
     canChangeTheme: PropTypes.bool,
     canCreateCopy: PropTypes.bool,
     canCreateNew: PropTypes.bool,
@@ -441,6 +448,7 @@ MenuBar.propTypes = {
     editMenuOpen: PropTypes.bool,
     enableCommunity: PropTypes.bool,
     fileMenuOpen: PropTypes.bool,
+    hasActiveMembership: PropTypes.bool,
     intl: intlShape,
     isRtl: PropTypes.bool,
     isShared: PropTypes.bool,
@@ -501,6 +509,7 @@ MenuBar.propTypes = {
     shouldSaveBeforeTransition: PropTypes.func,
     showComingSoon: PropTypes.bool,
     username: PropTypes.string,
+    avatarBadge: PropTypes.number,
     userOwnsProject: PropTypes.bool,
 
     accountMenuOptions: AccountMenuOptionsPropTypes,
@@ -534,6 +543,7 @@ const mapStateToProps = (state, ownProps) => {
         projectTitle: state.scratchGui.projectTitle,
         settingsMenuOpen: settingsMenuOpen(state),
         username: ownProps.username ?? (user ? user.username : null),
+        avatarBadge: user ? user.membership_avatar_badge : null,
         userIsEducator: permissions && permissions.educator,
         vm: state.scratchGui.vm,
         mode220022BC: isTimeTravel220022BC(state),
