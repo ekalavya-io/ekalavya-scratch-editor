@@ -38,6 +38,28 @@ const vmManagerHOC = function (WrappedComponent) {
             if (!this.props.isPlayerOnly && !this.props.isStarted) {
                 this.props.vm.start();
             }
+
+            // to load or save the project from parent app
+            window.addEventListener('message', async event => {
+                if (!event.data) return;
+                if (event.data.type === 'LOAD_PROJECT') {
+                    const buffer = event.data.buffer;
+                    this.props.vm.loadProject(buffer)
+                        .catch(e => console.error('Error loading project from buffer:', e));
+                }
+
+                if (event.data.type === 'SAVE_PROJECT') {
+                    const projectSb3 = await this.props.vm.saveProjectSb3();
+                    window.parent.postMessage(
+                        {
+                            type: 'PROJECT_SAVED',
+                            buffer: projectSb3
+                        },
+                        '*'
+                    );
+                }
+            });
+
         }
         componentDidUpdate (prevProps) {
             // if project is in loading state, AND fonts are loaded,

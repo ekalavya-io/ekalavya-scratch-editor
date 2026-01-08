@@ -9,6 +9,15 @@ const initialState = {
     hasEverEnteredEditor: true
 };
 
+// player only event
+window.addEventListener('message', event => {
+    if (!event.data) return;
+    if (event.data.type === 'FULL_SCREEN') {
+        initialState.isFullScreen = true;
+        initialState.isPlayerOnly = true;
+    }
+});
+
 const reducer = function (state, action) {
     if (typeof state === 'undefined') state = initialState;
     switch (action.type) {
